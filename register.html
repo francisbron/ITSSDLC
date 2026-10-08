@@ -1,0 +1,40 @@
+<!--Interface where user can create an account-->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Create New Account</title>
+    <link rel="stylesheet" href="register.css">
+</head>
+<body>
+    <div class="form-container">
+        <h2>Create New Account</h2>
+        <form action="/register" method="POST">
+            <input type="email" name="email" id="email" placeholder="Enter your DLSU email" required>
+            <input type="password" name="password" id="password" placeholder="Enter your password" required>
+        <button id="createNewAccount">Create Account</button>
+        
+        </form>
+        <p id="message"></p>
+        <p>Already have an account? <a href="index.html">Login here</a></p>  
+    </div>
+    
+    <script src="data.js"></script>
+    <script src="authentication.js"></script>
+    <script>
+        const emailInput = document.getElementById('email');
+        const passwordInput = document.getElementById('password');
+        document.getElementById('createNewAccount').addEventListener('click', function(){
+            const roleInput = document.querySelector('input[name="role"]:checked').value;
+            const result = register(emailInput.value, passwordInput.value, roleInput);
+            document.getElementById('message').textContent = result.message;
+            if (result.success){
+                setTimeout(() => {
+                    window.location.href = "index.html";
+                }, 1500); // Add delay before redirection to see success msg
+            }
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,37 @@
+[
+    {
+        "email": "JohnLenon@dlsu.edu.ph",
+        "name": "John Lenon",
+        "course": "Computer Science",
+        "yearLevel": "2nd Year",
+        "bio": "I love coding"
+    }, 
+    {
+        "email": "KenDLSU@dlsu.edu.ph",
+        "name": "Ken",
+        "course": "Information Technology",
+        "yearLevel": "3rd Year",
+        "bio": "My interest is watching movies and tv shows"
+    },
+    {
+        "email": "AlvinKelly@dlsu.edu.ph",
+        "name": "Alvin Kelly",
+        "course": "Information Systems",
+        "yearLevel": "1st Year",
+        "bio": "I did bad in exam"
+    },
+    {
+        "email": "Nelson@dlsu.edu.ph",
+        "name": "Nelson",
+        "course": "Software Engineering",
+        "yearLevel": "2nd Year",
+        "bio": "I'm about to go crazy"
+    },
+    {
+        "email": "Taylor@dlsu.edu.ph",
+        "name":"Taylor",
+        "course": "Data Science",
+        "yearLevel": "3rd Year",
+        "bio": "Hello, welcome to my profile"
+    }
+]

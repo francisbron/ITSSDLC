@@ -1,0 +1,12 @@
+<nav>
+    <a href="/about" {{#if aboutActive}}class="active"{{/if}}>About</a>
+    <a href="/dashboard" {{#if dashboardActive}}class="active"{{/if}}>Dashboard</a>
+    <a href="/makeReservation" {{#if makeReservationActive}}class="active"{{/if}}>Make Reservation</a>
+    <a href="/userReservations" {{#if userReservationsActive}}class="active"{{/if}}>My Reservations</a>
+    <a href="/profile" {{#if profileActive}}class="active"{{/if}}>Profile</a>
+
+    {{#if isTechnician}}
+        {{!-- Visible only to Admin/Technician --}}
+        <a href="/techView" {{#if techViewActive}}class="active"{{/if}}>Technician View</a>
+    {{/if}}
+</nav>

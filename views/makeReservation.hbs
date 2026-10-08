@@ -1,0 +1,127 @@
+<h2>Reserve a Lab Seat</h2>
+
+<form class="reservation-form" action="/makeReservation" method="POST">
+
+    <section class="form-section">
+        <h3>Select Laboratory</h3>
+        <div class="lab-options">
+            <label class="lab-card">
+                <input type="radio" name="lab" value="LAB1" required>
+                <div class="lab-info">
+                    <h4>Gokongwei G301</h4>
+                    <p>40 seats • Gokongwei Hall</p>
+                </div>
+            </label>
+            <label class="lab-card">
+                <input type="radio" name="lab" value="LAB2" required>
+                <div class="lab-info">
+                    <h4>Gokongwei G302</h4>
+                    <p>35 seats • Gokongwei Hall</p>
+                </div>
+            </label>
+            <label class="lab-card">
+                <input type="radio" name="lab" value="LAB3" required>
+                <div class="lab-info">
+                    <h4>Velasco V201</h4>
+                    <p>30 seats • Velasco Hall</p>
+                </div>
+            </label>
+        </div>
+    </section>
+
+    <section class="form-section">
+        <h3>Select Date</h3>
+        <div class="form-group">
+            <label for="reservation-date">Date:</label>
+            <input type="date" id="reservation-date" name="date" required>
+        </div>
+    </section>
+
+    <section class="form-section">
+        <h3>Select Time Slots</h3>
+        <p class="hint">Select one or more 30-minute time slots</p>
+        <div class="time-slots">
+            <label class="time-slot-option"><input type="checkbox" name="timeSlots[]" value="08:00"><span>8:00 AM</span></label>
+            <label class="time-slot-option"><input type="checkbox" name="timeSlots[]" value="08:30"><span>8:30 AM</span></label>
+            <label class="time-slot-option"><input type="checkbox" name="timeSlots[]" value="09:00"><span>9:00 AM</span></label>
+            <label class="time-slot-option"><input type="checkbox" name="timeSlots[]" value="09:30"><span>9:30 AM</span></label>
+            <label class="time-slot-option"><input type="checkbox" name="timeSlots[]" value="10:00"><span>10:00 AM</span></label>
+            <label class="time-slot-option"><input type="checkbox" name="timeSlots[]" value="10:30"><span>10:30 AM</span></label>
+            <label class="time-slot-option"><input type="checkbox" name="timeSlots[]" value="11:00"><span>11:00 AM</span></label>
+            <label class="time-slot-option"><input type="checkbox" name="timeSlots[]" value="11:30"><span>11:30 AM</span></label>
+            <label class="time-slot-option"><input type="checkbox" name="timeSlots[]" value="12:00"><span>12:00 PM</span></label>
+            <label class="time-slot-option"><input type="checkbox" name="timeSlots[]" value="12:30"><span>12:30 PM</span></label>
+            <label class="time-slot-option"><input type="checkbox" name="timeSlots[]" value="13:00"><span>1:00 PM</span></label>
+            <label class="time-slot-option"><input type="checkbox" name="timeSlots[]" value="13:30"><span>1:30 PM</span></label>
+            <label class="time-slot-option"><input type="checkbox" name="timeSlots[]" value="14:00"><span>2:00 PM</span></label>
+            <label class="time-slot-option"><input type="checkbox" name="timeSlots[]" value="14:30"><span>2:30 PM</span></label>
+            <label class="time-slot-option"><input type="checkbox" name="timeSlots[]" value="15:00"><span>3:00 PM</span></label>
+            <label class="time-slot-option"><input type="checkbox" name="timeSlots[]" value="15:30"><span>3:30 PM</span></label>
+            <label class="time-slot-option"><input type="checkbox" name="timeSlots[]" value="16:00"><span>4:00 PM</span></label>
+            <label class="time-slot-option"><input type="checkbox" name="timeSlots[]" value="16:30"><span>4:30 PM</span></label>
+            <label class="time-slot-option"><input type="checkbox" name="timeSlots[]" value="17:00"><span>5:00 PM</span></label>
+            <label class="time-slot-option"><input type="checkbox" name="timeSlots[]" value="17:30"><span>5:30 PM</span></label>
+            <label class="time-slot-option"><input type="checkbox" name="timeSlots[]" value="18:00"><span>6:00 PM</span></label>
+            <label class="time-slot-option"><input type="checkbox" name="timeSlots[]" value="18:30"><span>6:30 PM</span></label>
+            <label class="time-slot-option"><input type="checkbox" name="timeSlots[]" value="19:00"><span>7:00 PM</span></label>
+            <label class="time-slot-option"><input type="checkbox" name="timeSlots[]" value="19:30"><span>7:30 PM</span></label>
+        </div>
+    </section>
+
+    <section class="form-section">
+        <h3>Select Seat(s)</h3>
+        <p class="hint">Click on available seats to select</p>
+
+        <div class="screen-label">Front (Projector Screen)</div>
+
+        <div class="seat-map">
+            {{#each seatRows}}
+            <div class="seat-row">
+                <span class="row-label">{{this.label}}</span>
+                {{#each this.seats}}
+                    {{#if this.taken}}
+                        <label class="seat taken" title="{{#if this.anonymous}}Reserved (Anonymous){{else}}Reserved by {{this.reservedBy}}{{/if}}">
+                            <input type="checkbox" name="seats[]" value="{{this.id}}" disabled>
+                            <span class="seat-number">{{this.num}}</span>
+                        </label>
+                    {{else}}
+                        <label class="seat available">
+                            <input type="checkbox" name="seats[]" value="{{this.id}}">
+                            <span class="seat-number">{{this.num}}</span>
+                        </label>
+                    {{/if}}
+                {{/each}}
+            </div>
+            {{/each}}
+        </div>
+
+        <div class="seat-legend">
+            <div class="legend-item">
+                <span class="seat available small"></span>
+                <span>Available</span>
+            </div>
+            <div class="legend-item">
+                <span class="seat selected small"></span>
+                <span>Your Selection</span>
+            </div>
+            <div class="legend-item">
+                <span class="seat taken small"></span>
+                <span>Reserved</span>
+            </div>
+        </div>
+    </section>
+
+    <section class="form-section">
+        <div class="form-group">
+            <label class="checkbox-label">
+                <input type="checkbox" name="isAnonymous" value="true">
+                Make reservation anonymous (hide my name from others)
+            </label>
+        </div>
+    </section>
+
+    <div class="form-actions">
+        <button type="reset" class="btn-secondary">Clear</button>
+        <button type="submit" class="btn-primary">Confirm Reservation</button>
+    </div>
+</form>

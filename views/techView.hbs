@@ -1,0 +1,106 @@
+<h2>Technician Dashboard</h2>
+
+<div class="user-info-box">
+    <p><strong>Logged in as:</strong> {{user.email}}</p>
+    <p><strong>Account Type:</strong> Lab Technician</p>
+</div>
+
+<section class="reservations-section">
+    <h3>Today's Reservations</h3>
+    <p class="info-text">You can remove reservations of students who do not show up within 10 minutes of their scheduled time.</p>
+
+    {{#if reservations.length}}
+        {{#each reservations}}
+        <article class="reservation-card {{#if this.isNoShow}}no-show{{else}}pending{{/if}}">
+            <div class="card-header">
+                <h4>Reservation #{{this._id}}</h4>
+                {{#if this.isNoShow}}
+                    <span class="status-badge overdue">No-Show Eligible</span>
+                {{else}}
+                    <span class="status-badge active">Active</span>
+                {{/if}}
+            </div>
+
+            <div class="card-body">
+                <dl class="reservation-details">
+                    <dt>Student:</dt>
+                    <dd>{{#if this.isAnonymous}}Anonymous{{else}}{{this.email}}{{/if}}</dd>
+
+                    <dt>Lab:</dt>
+                    <dd>{{this.room}}</dd>
+
+                    <dt>Seat:</dt>
+                    <dd>{{this.seats}}</dd>
+
+                    <dt>Scheduled Time:</dt>
+                    <dd>{{this.timeSlots}}</dd>
+
+                    <dt>Date:</dt>
+                    <dd>{{this.date}}</dd>
+                </dl>
+            </div>
+
+            <div class="card-actions">
+                {{#if this.isNoShow}}
+                    <form action="/removeReservation/{{this._id}}" method="POST" style="display:inline;">
+                        <button type="submit" class="btn-danger" onclick="return confirm('Remove this reservation due to no-show?')">
+                            Remove Reservation (No-Show)
+                        </button>
+                    </form>
+                {{else}}
+                    <button class="btn-disabled" disabled>Cannot Remove Yet</button>
+                {{/if}}
+            </div>
+        </article>
+        {{/each}}
+    {{else}}
+        <p class="info-text">No reservations for today.</p>
+    {{/if}}
+</section>
+
+<section class="walk-in-section">
+    <h3>Create Walk-in Reservation</h3>
+
+    <form class="walk-in-form" action="/walkIn" method="POST">
+        <div class="form-row">
+            <div class="form-group">
+                <label for="student-email">Student Email:</label>
+                <input type="email" id="student-email" name="studentEmail" placeholder="student@dlsu.edu.ph" required>
+            </div>
+
+            <div class="form-group">
+                <label for="lab-select">Laboratory:</label>
+                <select id="lab-select" name="lab" required>
+                    <option value="">Select Lab</option>
+                    <option value="LAB1">Gokongwei G301</option>
+                    <option value="LAB2">Gokongwei G302</option>
+                    <option value="LAB3">Velasco V201</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="form-row">
+            <div class="form-group">
+                <label for="seat-number">Seat Number:</label>
+                <input type="text" id="seat-number" name="seat" placeholder="e.g., A5" required>
+            </div>
+
+            <div class="form-group">
+                <label for="duration">Duration:</label>
+                <select id="duration" name="duration" required>
+                    <option value="30">30 minutes (1 slot)</option>
+                    <option value="60">1 hour (2 slots)</option>
+                    <option value="90">1.5 hours (3 slots)</option>
+                    <option value="120">2 hours (4 slots)</option>
+                    <option value="150">2.5 hours (5 slots)</option>
+                    <option value="180">3 hours (6 slots)</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="form-actions">
+            <button type="reset" class="btn-secondary">Clear</button>
+            <button type="submit" class="btn-primary">Create Walk-in Reservation</button>
+        </div>
+    </form>
+</section>

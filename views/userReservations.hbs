@@ -1,0 +1,50 @@
+<h2>My Reservations</h2>
+
+<div class="user-info-box">
+    <p><strong>Logged in as:</strong> {{user.email}}</p>
+    <p><strong>Account Type:</strong> {{user.role}}</p>
+</div>
+
+<section class="reservations-list">
+    {{#if reservations.length}}
+        {{#each reservations}}
+        <article class="reservation-card">
+            <div class="card-header">
+                <h3>Reservation #{{this._id}}</h3>
+                <span class="status-badge active">{{this.status}}</span>
+            </div>
+
+            <div class="card-body">
+                <dl class="reservation-details">
+                    <dt>Lab:</dt>
+                    <dd>{{this.room}}</dd>
+
+                    <dt>Date:</dt>
+                    <dd>{{this.date}}</dd>
+
+                    <dt>Seats:</dt>
+                    <dd>{{join this.seats ", "}}</dd>
+
+                    <dt>Time Slots:</dt>
+                    <dd>{{this.timeSlots}}</dd>
+
+                    <dt>Anonymous:</dt>
+                    <dd>{{#if this.isAnonymous}}Yes{{else}}No{{/if}}</dd>
+                </dl>
+            </div>
+
+            <div class="card-actions">
+                <a href="/editReservation/{{this._id}}" class="btn-edit">Edit</a>
+                <form action="/cancelReservation/{{this._id}}" method="POST" style="display:inline;">
+                    <button type="submit" class="btn-cancel" onclick="return confirm('Cancel this reservation?')">Cancel</button>
+                </form>
+            </div>
+        </article>
+        {{/each}}
+    {{else}}
+        <div class="no-reservations">
+            <p>You have no active reservations.</p>
+            <a href="/makeReservation" class="btn-primary">Make a Reservation</a>
+        </div>
+    {{/if}}
+</section>

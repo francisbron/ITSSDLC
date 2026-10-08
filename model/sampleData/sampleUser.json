@@ -1,0 +1,38 @@
+[
+    {
+        "email": "JohnLenon@dlsu.edu.ph",
+        "password": "John@1234",
+        "role": "student"
+    }, 
+    {
+        "email": "KenDLSU@dlsu.edu.ph",
+        "password": "Ken@1234",
+        "role": "student"
+    },
+    {
+        "email": "AlvinKelly@dlsu.edu.ph",
+        "password": "Alvin@1234",
+        "role": "student"
+    },
+    {
+        "email": "Nelson@dlsu.edu.ph",
+        "password": "Nelson@1234",
+        "role": "student"
+    },
+    {
+        "email": "Taylor@dlsu.edu.ph",
+        "password": "Taylor@1234",
+        "role": "student"
+    },
+    {
+        "email":"Admin1@dlsu.edu.ph",
+        "password": "sDF@7nk#011",
+        "role": "admin"
+    },
+    {
+        "email":"Admin2@dlsu.edu.ph",
+        "password": "sAG@9nk#679",
+        "role": "admin"
+    }
+
+]

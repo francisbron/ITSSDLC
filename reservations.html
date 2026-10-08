@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Make Reservation</title>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Lab Reservation System</h1>
+            <nav>
+                <a href="index.html">Home</a>
+                <a href="dashboard.html">Dashboard</a>
+                <a href="reservation.html" class="active">Make Reservation</a>
+                <a href="my-reservations.html">My Reservations</a>
+                <a href="profile.html">Profile</a>
+            </nav>
+        </header>
+
+        <main>
+            <h2>Make a Reservation</h2>
+            
+            <section id="lab-selection" class="reservation-step">
+                <h3>Select Laboratory</h3>
+                <div id="lab-list" class="lab-grid"></div>
+            </section>
+
+            <section id="date-selection" class="reservation-step" style="display: none;">
+                <h3>Select Date</h3>
+                <div id="date-list" class="date-grid"></div>
+            </section>
+
+            <section id="slot-selection" class="reservation-step" style="display: none;">
+                <h3>Select Seat and Time</h3>
+                
+                <div class="selection-info">
+                    <p><strong>Lab:</strong> <span id="selected-lab-name"></span></p>
+                    <p><strong>Date:</strong> <span id="selected-date"></span></p>
+                </div>
+
+                <div class="seat-selection">
+                    <h4>Seats</h4>
+                    <div id="seat-grid" class="seat-grid"></div>
+                    <div><strong>Selected:</strong> <span id="selected-seats-text">None</span></div>
+                </div>
+
+                <div class="timeslot-selection">
+                    <h4>Time Slots</h4>
+                    <div id="timeslot-grid" class="timeslot-grid"></div>
+                    <div><strong>Selected:</strong> <span id="selected-slots-text">None</span></div>
+                </div>
+
+                <div class="anonymous-option">
+                    <label>
+                        <input type="checkbox" id="anonymous-checkbox">
+                        Anonymous reservation
+                    </label>
+                </div>
+
+                <div class="action-buttons">
+                    <button id="btn-back-to-date" class="btn-secondary">Back</button>
+                    <button id="btn-confirm-reservation" class="btn-primary">Confirm</button>
+                </div>
+            </section>
+
+            <div id="confirmation-message" class="message" style="display: none;"></div>
+        </main>
+    </div>
+
+    <script src="reservations.js"></script>
+    
+    <script>
+        let selectedLab = null;
+        let selectedDate = null;
+        let selectedSeats = [];
+        let selectedSlots = [];
+
+        const labs = [
+            { id: "LAB1", name: "Gokongwei G301", building: "Gokongwei Hall", totalSeats: 40 },
+            { id: "LAB2", name: "Gokongwei G302", building: "Gokongwei Hall", totalSeats: 35 },
+            { id: "LAB3", name: "Velasco V201", building: "Velasco Hall", totalSeats: 30 }
+        ];
+
+        document.addEventListener('DOMContentLoaded', function() {
+            const currentUser = JSON.parse(localStorage.getItem("currentUser"));
+            if (!currentUser) {
+                alert("Please log in");
+                window.location.href = "index.html";
+                return;
+            }
+
+            displayLabs();
+            setupEventListeners();
+        });
+
+        function displayLabs() {
+            const labList = document.getElementById('lab-list');
+            labList.innerHTML = '';
+
+            for (let i = 0; i < labs.length; i++) {
+                const lab = labs[i];
+                const labCard = document.createElement('div');
+                labCard.className = 'lab-card';
+                labCard.innerHTML = '<h4>' + lab.name + '</h4>' +
+                    '<p>' + lab.building + '</p>' +
+                    '<p>Seats: ' + lab.totalSeats + '</p>' +
+                    '<button class="btn-select-lab" data-lab-id="' + lab.id + '">Select</button>';
+                labList.appendChild(labCard);
+            }
+
+            const labButtons = document.querySelectorAll('.btn-select-lab');
+            for (let i = 0; i < labButtons.length; i++) {
+                labButtons[i].addEventListener('click', function() {
+                    selectLab(this.getAttribute('data-lab-id'));
+                });
+            }
+        }
+
+        function selectLab(labId) {
+            for (let i = 0; i < labs.length; i++) {
+                if (labs[i].id === labId) {
+                    selectedLab = labs[i];
+                    break;
+                }
+            }
+            document.getElementById('lab-selection').style.display = 'none';
+            document.getElementById('date-selection').style.display = 'block';
+            displayDates();
+        }
+
+        function displayDates() {
+            const dateList = document.getElementById('date-list');
+            dateList.innerHTML = '';
+            const dates = getNext7Days();
+
+            for (let i = 0; i < dates.length; i++) {
+                const dateObj = dates[i];
+                const dateCard = document.createElement('div');
+                dateCard.className = 'date-card';
+                dateCard.innerHTML = '<h4>' + dateObj.display + '</h4>' +
+                    '<button class="btn-select-date" data-date="' + dateObj.dateString + '">Select</button>';
+                dateList.appendChild(dateCard);
+            }
+
+            const dateButtons = document.querySelectorAll('.btn-select-date');
+            for (let i = 0; i < dateButtons.length; i++) {
+                dateButtons[i].addEventListener('click', function() {
+                    selectDate(this.getAttribute('data-date'));
+                });
+            }
+        }
+
+        function selectDate(date) {
+            selectedDate = date;
+            document.getElementById('selected-lab-name').textContent = selectedLab.name;
+            document.getElementById('selected-date').textContent = date;
+            document.getElementById('date-selection').style.display = 'none';
+            document.getElementById('slot-selection').style.display = 'block';
+            displaySeats();
+            displayTimeSlots();
+        }
+
+        function displaySeats() {
+            const seatGrid = document.getElementById('seat-grid');
+            seatGrid.innerHTML = '';
+
+            for (let i = 1; i <= selectedLab.totalSeats; i++) {
+                const seatBtn = document.createElement('button');
+                seatBtn.className = 'seat-btn';
+                seatBtn.textContent = i;
+                seatBtn.setAttribute('data-seat', i);
+                seatBtn.addEventListener('click', function() {
+                    toggleSeatSelection(i, this);
+                });
+                seatGrid.appendChild(seatBtn);
+            }
+        }
+
+        function toggleSeatSelection(seatNumber, buttonElement) {
+            let found = false;
+            let foundIndex = -1;
+            
+            for (let i = 0; i < selectedSeats.length; i++) {
+                if (selectedSeats[i] === seatNumber) {
+                    found = true;
+                    foundIndex = i;
+                    break;
+                }
+            }
+            
+            if (found) {
+                selectedSeats.splice(foundIndex, 1);
+                buttonElement.classList.remove('selected');
+            } else {
+                selectedSeats.push(seatNumber);
+                buttonElement.classList.add('selected');
+            }
+            updateSelectedSeatsDisplay();
+        }
+
+        function updateSelectedSeatsDisplay() {
+            const display = document.getElementById('selected-seats-text');
+            if (selectedSeats.length === 0) {
+                display.textContent = 'None';
+            } else {
+                selectedSeats.sort(function(a, b) { return a - b; });
+                display.textContent = selectedSeats.join(', ');
+            }
+        }
+
+        function displayTimeSlots() {
+            const timeslotGrid = document.getElementById('timeslot-grid');
+            timeslotGrid.innerHTML = '';
+            const slots = generateTimeSlots(selectedDate, 8, 20);
+
+            for (let i = 0; i < slots.length; i++) {
+                const slot = slots[i];
+                const slotBtn = document.createElement('button');
+                slotBtn.className = 'timeslot-btn';
+                slotBtn.textContent = slot.display;
+                slotBtn.setAttribute('data-datetime', slot.datetime);
+                slotBtn.addEventListener('click', function() {
+                    toggleSlotSelection(slot.datetime, this);
+                });
+                timeslotGrid.appendChild(slotBtn);
+            }
+        }
+
+        function toggleSlotSelection(datetime, buttonElement) {
+            let found = false;
+            let foundIndex = -1;
+            
+            for (let i = 0; i < selectedSlots.length; i++) {
+                if (selectedSlots[i] === datetime) {
+                    found = true;
+                    foundIndex = i;
+                    break;
+                }
+            }
+            
+            if (found) {
+                selectedSlots.splice(foundIndex, 1);
+                buttonElement.classList.remove('selected');
+            } else {
+                selectedSlots.push(datetime);
+                buttonElement.classList.add('selected');
+            }
+            updateSelectedSlotsDisplay();
+        }
+
+        function updateSelectedSlotsDisplay() {
+            const display = document.getElementById('selected-slots-text');
+            if (selectedSlots.length === 0) {
+                display.textContent = 'None';
+            } else {
+                selectedSlots.sort();
+                let displayText = '';
+                for (let i = 0; i < selectedSlots.length; i++) {
+                    const time = new Date(selectedSlots[i]);
+                    const hours = time.getHours();
+                    const minutes = time.getMinutes();
+                    
+                    let displayHour = hours;
+                    let period = 'AM';
+                    if (hours >= 12) period = 'PM';
+                    if (hours > 12) displayHour = hours - 12;
+                    if (hours === 0) displayHour = 12;
+                    
+                    let minuteStr = minutes.toString();
+                    if (minutes < 10) minuteStr = '0' + minutes;
+                    
+                    if (i > 0) displayText += ', ';
+                    displayText += displayHour + ':' + minuteStr + ' ' + period;
+                }
+                display.textContent = displayText;
+            }
+        }
+
+        function setupEventListeners() {
+            document.getElementById('btn-back-to-date').addEventListener('click', function() {
+                document.getElementById('slot-selection').style.display = 'none';
+                document.getElementById('date-selection').style.display = 'block';
+                selectedSeats = [];
+                selectedSlots = [];
+            });
+
+            document.getElementById('btn-confirm-reservation').addEventListener('click', confirmReservation);
+        }
+
+        function confirmReservation() {
+            if (selectedSeats.length === 0) {
+                showMessage('Please select at least one seat', 'error');
+                return;
+            }
+
+            if (selectedSlots.length === 0) {
+                showMessage('Please select at least one time slot', 'error');
+                return;
+            }
+
+            const currentUser = JSON.parse(localStorage.getItem("currentUser"));
+            const isAnonymous = document.getElementById('anonymous-checkbox').checked;
+
+            const reservationData = {
+                userId: currentUser.email,
+                userName: currentUser.name || currentUser.email,
+                labId: selectedLab.id,
+                labName: selectedLab.name,
+                seats: selectedSeats,
+                slots: selectedSlots,
+                isAnonymous: isAnonymous
+            };
+
+            const result = createReservation(reservationData);
+
+            if (result.success) {
+                showMessage('Reservation created!', 'success');
+                setTimeout(function() {
+                    window.location.href = 'my-reservations.html';
+                }, 2000);
+            } else {
+                showMessage('Error: ' + result.error, 'error');
+            }
+        }
+
+        function showMessage(message, type) {
+            const messageDiv = document.getElementById('confirmation-message');
+            messageDiv.textContent = message;
+            messageDiv.className = 'message ' + type;
+            messageDiv.style.display = 'block';
+
+            setTimeout(function() {
+                messageDiv.style.display = 'none';
+            }, 5000);
+        }
+    </script>
+</body>
+</html>

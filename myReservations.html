@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Reservations</title>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Lab Reservation System</h1>
+            <nav>
+                <a href="index.html">Home</a>
+                <a href="dashboard.html">Dashboard</a>
+                <a href="reservation.html">Make Reservation</a>
+                <a href="my-reservations.html" class="active">My Reservations</a>
+                <a href="profile.html">Profile</a>
+            </nav>
+        </header>
+
+        <main>
+            <h2>My Reservations</h2>
+            
+            <div id="user-info" class="user-info"></div>
+
+            <div id="reservations-list" class="reservations-list"></div>
+
+            <div id="no-reservations" class="no-data-message" style="display: none;">
+                <p>No active reservations</p>
+                <a href="reservation.html" class="btn-primary">Make a Reservation</a>
+            </div>
+
+            <div id="message" class="message" style="display: none;"></div>
+        </main>
+
+
+        <div id="edit-modal" class="modal" style="display: none;">
+            <div class="modal-content">
+                <span class="close-modal">&times;</span>
+                <h3>Edit Reservation</h3>
+                
+                <div id="edit-form">
+                    <div class="form-group">
+                        <label>ID:</label>
+                        <p id="edit-res-id"></p>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Lab:</label>
+                        <p id="edit-lab-name"></p>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Current Seats:</label>
+                        <p id="edit-current-seats"></p>
+                        <label>New Seats (comma-separated):</label>
+                        <input type="text" id="edit-seats-input">
+                    </div>
+
+                    <div class="form-group">
+                        <label>Current Slots:</label>
+                        <p id="edit-current-slots"></p>
+                        <label>New Slots:</label>
+                        <div id="edit-timeslot-grid" class="timeslot-grid"></div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>
+                            <input type="checkbox" id="edit-anonymous">
+                            Anonymous
+                        </label>
+                    </div>
+
+                    <div class="modal-actions">
+                        <button id="btn-save-edit" class="btn-primary">Save</button>
+                        <button id="btn-cancel-edit" class="btn-secondary">Cancel</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="reservations.js"></script>
+    
+    <script>
+        let currentUser = null;
+        let userReservations = [];
+        let editingReservation = null;
+        let editSelectedSlots = [];
+
+        document.addEventListener('DOMContentLoaded', function() {
+            currentUser = JSON.parse(localStorage.getItem("currentUser"));
+            if (!currentUser) {
+                alert("Please log in");
+                window.location.href = "index.html";
+                return;
+            }
+
+            displayUserInfo();
+            loadReservations();
+            setupModalListeners();
+        });
+
+        function displayUserInfo() {
+            const userInfoDiv = document.getElementById('user-info');
+            const isTechnician = currentUser.role === 'technician';
+            const userName = currentUser.name || currentUser.email;
+            const userType = isTechnician ? 'Lab Technician' : 'Student';
+            
+            userInfoDiv.innerHTML = '<p><strong>User:</strong> ' + userName + '</p>' +
+                '<p><strong>Type:</strong> ' + userType + '</p>';
+        }
+
+        function loadReservations() {
+            userReservations = getUserReservations(currentUser.email);
+
+            if (userReservations.length === 0) {
+                document.getElementById('reservations-list').style.display = 'none';
+                document.getElementById('no-reservations').style.display = 'block';
+            } else {
+                document.getElementById('reservations-list').style.display = 'block';
+                document.getElementById('no-reservations').style.display = 'none';
+                displayReservations();
+            }
+        }
+
+        function displayReservations() {
+            const reservationsList = document.getElementById('reservations-list');
+            reservationsList.innerHTML = '';
+
+            for (let i = 0; i < userReservations.length; i++) {
+                const card = createReservationCard(userReservations[i]);
+                reservationsList.appendChild(card);
+            }
+        }
+
+        function createReservationCard(reservation) {
+            const card = document.createElement('div');
+            card.className = 'reservation-card';
+            
+            let slotTimes = '';
+            for (let i = 0; i < reservation.slots.length; i++) {
+                const time = new Date(reservation.slots[i]);
+                const hours = time.getHours();
+                const minutes = time.getMinutes();
+                
+                let displayHour = hours;
+                let period = 'AM';
+                if (hours >= 12) period = 'PM';
+                if (hours > 12) displayHour = hours - 12;
+                if (hours === 0) displayHour = 12;
+                
+                let minuteStr = minutes.toString();
+                if (minutes < 10) minuteStr = '0' + minutes;
+                
+                if (i > 0) slotTimes += ', ';
+                slotTimes += displayHour + ':' + minuteStr + ' ' + period;
+            }
+
+            const firstSlot = new Date(reservation.slots[0]);
+            const reservationDate = firstSlot.toLocaleDateString('en-US', {
+                weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
+            });
+
+            const isTechnician = currentUser.role === 'technician';
+            let technicianRemoveBtn = '';
+            
+            if (isTechnician) {
+                const removeCheck = canTechnicianRemove(reservation.id);
+                if (removeCheck.canRemove) {
+                    technicianRemoveBtn = '<button class="btn-remove-noshow" data-res-id="' + reservation.id + '">Remove No-Show</button>' +
+                        '<p class="remove-info">' + Math.floor(removeCheck.minutesPassed) + ' min passed</p>';
+                } else {
+                    technicianRemoveBtn = '<p class="remove-info-disabled">' + removeCheck.reason + '</p>';
+                }
+            }
+
+            const anonymousText = reservation.isAnonymous ? 'Yes' : 'No';
+
+            card.innerHTML = '<div class="reservation-header">' +
+                    '<h3>' + reservation.id + '</h3>' +
+                    '<span class="status-badge">' + reservation.status + '</span>' +
+                '</div>' +
+                '<div class="reservation-details">' +
+                    '<p><strong>Lab:</strong> ' + reservation.labName + '</p>' +
+                    '<p><strong>Date:</strong> ' + reservationDate + '</p>' +
+                    '<p><strong>Seats:</strong> ' + reservation.seats.join(', ') + '</p>' +
+                    '<p><strong>Times:</strong> ' + slotTimes + '</p>' +
+                    '<p><strong>Anonymous:</strong> ' + anonymousText + '</p>' +
+                '</div>' +
+                '<div class="reservation-actions">' +
+                    '<button class="btn-edit" data-res-id="' + reservation.id + '">Edit</button>' +
+                    '<button class="btn-cancel" data-res-id="' + reservation.id + '">Cancel</button>' +
+                    technicianRemoveBtn +
+                '</div>';
+
+            const editBtn = card.querySelector('.btn-edit');
+            const cancelBtn = card.querySelector('.btn-cancel');
+            const removeBtn = card.querySelector('.btn-remove-noshow');
+
+            editBtn.addEventListener('click', function() { 
+                openEditModal(reservation.id); 
+            });
+            cancelBtn.addEventListener('click', function() { 
+                handleCancelReservation(reservation.id); 
+            });
+            if (removeBtn) {
+                removeBtn.addEventListener('click', function() { 
+                    handleRemoveNoShow(reservation.id); 
+                });
+            }
+
+            return card;
+        }
+
+        function openEditModal(reservationId) {
+            editingReservation = null;
+            for (let i = 0; i < userReservations.length; i++) {
+                if (userReservations[i].id === reservationId) {
+                    editingReservation = userReservations[i];
+                    break;
+                }
+            }
+            if (!editingReservation) return;
+
+            document.getElementById('edit-res-id').textContent = editingReservation.id;
+            document.getElementById('edit-lab-name').textContent = editingReservation.labName;
+            document.getElementById('edit-current-seats').textContent = editingReservation.seats.join(', ');
+            document.getElementById('edit-seats-input').value = editingReservation.seats.join(', ');
+            document.getElementById('edit-anonymous').checked = editingReservation.isAnonymous;
+
+            let currentSlotTimes = '';
+            for (let i = 0; i < editingReservation.slots.length; i++) {
+                const time = new Date(editingReservation.slots[i]);
+                const hours = time.getHours();
+                const minutes = time.getMinutes();
+                
+                let displayHour = hours;
+                let period = 'AM';
+                if (hours >= 12) period = 'PM';
+                if (hours > 12) displayHour = hours - 12;
+                if (hours === 0) displayHour = 12;
+                
+                let minuteStr = minutes.toString();
+                if (minutes < 10) minuteStr = '0' + minutes;
+                
+                if (i > 0) currentSlotTimes += ', ';
+                currentSlotTimes += displayHour + ':' + minuteStr + ' ' + period;
+            }
+            document.getElementById('edit-current-slots').textContent = currentSlotTimes;
+
+            const firstSlot = new Date(editingReservation.slots[0]);
+            const year = firstSlot.getFullYear();
+            let month = firstSlot.getMonth() + 1;
+            let day = firstSlot.getDate();
+            
+            if (month < 10) month = '0' + month;
+            if (day < 10) day = '0' + day;
+            
+            const reservationDate = year + '-' + month + '-' + day;
+            generateEditTimeSlots(reservationDate);
+
+            editSelectedSlots = [];
+            for (let i = 0; i < editingReservation.slots.length; i++) {
+                editSelectedSlots.push(editingReservation.slots[i]);
+            }
+            updateEditSlotSelection();
+
+            document.getElementById('edit-modal').style.display = 'block';
+        }
+
+        function generateEditTimeSlots(date) {
+            const timeslotGrid = document.getElementById('edit-timeslot-grid');
+            timeslotGrid.innerHTML = '';
+            const slots = generateTimeSlots(date, 8, 20);
+
+            for (let i = 0; i < slots.length; i++) {
+                const slot = slots[i];
+                const slotBtn = document.createElement('button');
+                slotBtn.className = 'timeslot-btn';
+                slotBtn.type = 'button';
+                slotBtn.textContent = slot.display;
+                slotBtn.setAttribute('data-datetime', slot.datetime);
+                slotBtn.addEventListener('click', function() {
+                    toggleEditSlot(slot.datetime, this);
+                });
+                timeslotGrid.appendChild(slotBtn);
+            }
+        }
+
+        function toggleEditSlot(datetime, buttonElement) {
+            let found = false;
+            let foundIndex = -1;
+            
+            for (let i = 0; i < editSelectedSlots.length; i++) {
+                if (editSelectedSlots[i] === datetime) {
+                    found = true;
+                    foundIndex = i;
+                    break;
+                }
+            }
+            
+            if (found) {
+                editSelectedSlots.splice(foundIndex, 1);
+                buttonElement.classList.remove('selected');
+            } else {
+                editSelectedSlots.push(datetime);
+                buttonElement.classList.add('selected');
+            }
+        }
+
+        function updateEditSlotSelection() {
+            const slotButtons = document.querySelectorAll('#edit-timeslot-grid .timeslot-btn');
+            for (let i = 0; i < slotButtons.length; i++) {
+                const datetime = slotButtons[i].getAttribute('data-datetime');
+                let isSelected = false;
+                
+                for (let j = 0; j < editSelectedSlots.length; j++) {
+                    if (editSelectedSlots[j] === datetime) {
+                        isSelected = true;
+                        break;
+                    }
+                }
+                
+                if (isSelected) {
+                    slotButtons[i].classList.add('selected');
+                }
+            }
+        }
+
+        function saveEdit() {
+            if (!editingReservation) return;
+
+            const seatsInput = document.getElementById('edit-seats-input').value;
+            const seatParts = seatsInput.split(',');
+            const newSeats = [];
+            
+            for (let i = 0; i < seatParts.length; i++) {
+                const num = parseInt(seatParts[i].trim());
+                if (!isNaN(num)) {
+                    newSeats.push(num);
+                }
+            }
+
+            if (newSeats.length === 0) {
+                showMessage('Invalid seats', 'error');
+                return;
+            }
+
+            if (editSelectedSlots.length === 0) {
+                showMessage('Select at least one slot', 'error');
+                return;
+            }
+
+            const isAnonymous = document.getElementById('edit-anonymous').checked;
+
+            const updates = {
+                seats: newSeats,
+                slots: editSelectedSlots,
+                isAnonymous: isAnonymous
+            };
+
+            const isTechnician = currentUser.role === 'technician';
+            const result = editReservation(editingReservation.id, updates, currentUser.email, isTechnician);
+
+            if (result.success) {
+                showMessage('Updated!', 'success');
+                closeEditModal();
+                loadReservations();
+            } else {
+                showMessage('Error: ' + result.error, 'error');
+            }
+        }
+
+        function handleCancelReservation(reservationId) {
+            if (!confirm('Cancel this reservation?')) return;
+
+            const isTechnician = currentUser.role === 'technician';
+            const result = cancelReservation(reservationId, currentUser.email, isTechnician);
+
+            if (result.success) {
+                showMessage('Cancelled', 'success');
+                loadReservations();
+            } else {
+                showMessage('Error: ' + result.error, 'error');
+            }
+        }
+
+        function handleRemoveNoShow(reservationId) {
+            if (!confirm('Remove for no-show?')) return;
+
+            const result = removeNoShowReservation(reservationId, currentUser.email);
+
+            if (result.success) {
+                showMessage(result.message, 'success');
+                loadReservations();
+            } else {
+                showMessage('Error: ' + result.error, 'error');
+            }
+        }
+
+        function setupModalListeners() {
+            document.querySelector('.close-modal').addEventListener('click', closeEditModal);
+            document.getElementById('btn-cancel-edit').addEventListener('click', closeEditModal);
+            document.getElementById('btn-save-edit').addEventListener('click', saveEdit);
+
+            window.addEventListener('click', function(event) {
+                const modal = document.getElementById('edit-modal');
+                if (event.target === modal) closeEditModal();
+            });
+        }
+
+        function closeEditModal() {
+            document.getElementById('edit-modal').style.display = 'none';
+            editingReservation = null;
+            editSelectedSlots = [];
+        }
+
+        function showMessage(message, type) {
+            const messageDiv = document.getElementById('message');
+            messageDiv.textContent = message;
+            messageDiv.className = 'message ' + type;
+            messageDiv.style.display = 'block';
+
+            setTimeout(function() {
+                messageDiv.style.display = 'none';
+            }, 5000);
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,110 @@
+<h2>Edit Reservation</h2>
+
+<section class="current-details">
+    <h3>Current Reservation Details</h3>
+    <dl class="details-list">
+        <dt>Reservation ID:</dt>
+        <dd>{{reservation._id}}</dd>
+
+        <dt>Lab:</dt>
+        <dd>{{reservation.room}}</dd>
+
+        <dt>Current Date:</dt>
+        <dd>{{reservation.date}}</dd>
+
+        <dt>Current Seats:</dt>
+        <dd>{{reservation.seats}}</dd>
+
+        <dt>Current Time Slots:</dt>
+        <dd>{{reservation.timeSlots}}</dd>
+    </dl>
+</section>
+
+<form action="/editReservation/{{reservation._id}}" method="POST" class="edit-form">
+
+    <section class="form-section">
+        <h3>Change Date</h3>
+        <div class="form-group">
+            <label for="new-date">New Date:</label>
+            <input type="date" id="new-date" name="date" value="{{reservation.date}}">
+        </div>
+    </section>
+
+    <section class="form-section">
+        <h3>Change Time Slots</h3>
+        <p class="hint">Select one or more 30-minute time slots</p>
+        <div class="time-slots">
+            <label class="time-slot-option"><input type="checkbox" name="timeSlots[]" value="08:00" {{#if (includes reservation.timeSlots "08:00")}}checked{{/if}}><span>8:00 AM</span></label>
+            <label class="time-slot-option"><input type="checkbox" name="timeSlots[]" value="08:30" {{#if (includes reservation.timeSlots "08:30")}}checked{{/if}}><span>8:30 AM</span></label>
+            <label class="time-slot-option"><input type="checkbox" name="timeSlots[]" value="09:00" {{#if (includes reservation.timeSlots "09:00")}}checked{{/if}}><span>9:00 AM</span></label>
+            <label class="time-slot-option"><input type="checkbox" name="timeSlots[]" value="09:30" {{#if (includes reservation.timeSlots "09:30")}}checked{{/if}}><span>9:30 AM</span></label>
+            <label class="time-slot-option"><input type="checkbox" name="timeSlots[]" value="10:00" {{#if (includes reservation.timeSlots "10:00")}}checked{{/if}}><span>10:00 AM</span></label>
+            <label class="time-slot-option"><input type="checkbox" name="timeSlots[]" value="10:30" {{#if (includes reservation.timeSlots "10:30")}}checked{{/if}}><span>10:30 AM</span></label>
+            <label class="time-slot-option"><input type="checkbox" name="timeSlots[]" value="11:00" {{#if (includes reservation.timeSlots "11:00")}}checked{{/if}}><span>11:00 AM</span></label>
+            <label class="time-slot-option"><input type="checkbox" name="timeSlots[]" value="11:30" {{#if (includes reservation.timeSlots "11:30")}}checked{{/if}}><span>11:30 AM</span></label>
+            <label class="time-slot-option"><input type="checkbox" name="timeSlots[]" value="12:00" {{#if (includes reservation.timeSlots "12:00")}}checked{{/if}}><span>12:00 PM</span></label>
+            <label class="time-slot-option"><input type="checkbox" name="timeSlots[]" value="12:30" {{#if (includes reservation.timeSlots "12:30")}}checked{{/if}}><span>12:30 PM</span></label>
+            <label class="time-slot-option"><input type="checkbox" name="timeSlots[]" value="13:00" {{#if (includes reservation.timeSlots "13:00")}}checked{{/if}}><span>1:00 PM</span></label>
+            <label class="time-slot-option"><input type="checkbox" name="timeSlots[]" value="13:30" {{#if (includes reservation.timeSlots "13:30")}}checked{{/if}}><span>1:30 PM</span></label>
+            <label class="time-slot-option"><input type="checkbox" name="timeSlots[]" value="14:00" {{#if (includes reservation.timeSlots "14:00")}}checked{{/if}}><span>2:00 PM</span></label>
+            <label class="time-slot-option"><input type="checkbox" name="timeSlots[]" value="14:30" {{#if (includes reservation.timeSlots "14:30")}}checked{{/if}}><span>2:30 PM</span></label>
+            <label class="time-slot-option"><input type="checkbox" name="timeSlots[]" value="15:00" {{#if (includes reservation.timeSlots "15:00")}}checked{{/if}}><span>3:00 PM</span></label>
+            <label class="time-slot-option"><input type="checkbox" name="timeSlots[]" value="15:30" {{#if (includes reservation.timeSlots "15:30")}}checked{{/if}}><span>3:30 PM</span></label>
+            <label class="time-slot-option"><input type="checkbox" name="timeSlots[]" value="16:00" {{#if (includes reservation.timeSlots "16:00")}}checked{{/if}}><span>4:00 PM</span></label>
+            <label class="time-slot-option"><input type="checkbox" name="timeSlots[]" value="16:30" {{#if (includes reservation.timeSlots "16:30")}}checked{{/if}}><span>4:30 PM</span></label>
+            <label class="time-slot-option"><input type="checkbox" name="timeSlots[]" value="17:00" {{#if (includes reservation.timeSlots "17:00")}}checked{{/if}}><span>5:00 PM</span></label>
+            <label class="time-slot-option"><input type="checkbox" name="timeSlots[]" value="17:30" {{#if (includes reservation.timeSlots "17:30")}}checked{{/if}}><span>5:30 PM</span></label>
+            <label class="time-slot-option"><input type="checkbox" name="timeSlots[]" value="18:00" {{#if (includes reservation.timeSlots "18:00")}}checked{{/if}}><span>6:00 PM</span></label>
+            <label class="time-slot-option"><input type="checkbox" name="timeSlots[]" value="18:30" {{#if (includes reservation.timeSlots "18:30")}}checked{{/if}}><span>6:30 PM</span></label>
+            <label class="time-slot-option"><input type="checkbox" name="timeSlots[]" value="19:00" {{#if (includes reservation.timeSlots "19:00")}}checked{{/if}}><span>7:00 PM</span></label>
+            <label class="time-slot-option"><input type="checkbox" name="timeSlots[]" value="19:30" {{#if (includes reservation.timeSlots "19:30")}}checked{{/if}}><span>7:30 PM</span></label>
+        </div>
+    </section>
+
+    <section class="form-section">
+        <h3>Change Seat</h3>
+        <p class="hint">Select new seat (only one seat can be selected for edit)</p>
+
+        <div class="screen-label">Front (Projector Screen)</div>
+
+        <div class="seat-map">
+            {{#each seatRows}}
+            <div class="seat-row">
+                <span class="row-label">{{this.label}}</span>
+                {{#each this.seats}}
+                    {{#if this.taken}}
+                        <label class="seat taken" title="{{#if this.anonymous}}Reserved (Anonymous){{else}}Reserved by {{this.reservedBy}}{{/if}}">
+                            <input type="radio" name="seat" value="{{this.id}}" disabled>
+                            <span class="seat-number">{{this.num}}</span>
+                        </label>
+                    {{else if this.current}}
+                        <label class="seat selected">
+                            <input type="radio" name="seat" value="{{this.id}}" checked>
+                            <span class="seat-number">{{this.num}}</span>
+                        </label>
+                    {{else}}
+                        <label class="seat available">
+                            <input type="radio" name="seat" value="{{this.id}}">
+                            <span class="seat-number">{{this.num}}</span>
+                        </label>
+                    {{/if}}
+                {{/each}}
+            </div>
+            {{/each}}
+        </div>
+    </section>
+
+    <section class="form-section">
+        <div class="form-group">
+            <label class="checkbox-label">
+                <input type="checkbox" name="isAnonymous" value="true" {{#if reservation.isAnonymous}}checked{{/if}}>
+                Make reservation anonymous
+            </label>
+        </div>
+    </section>
+
+    <div class="form-actions">
+        <a href="/userReservations" class="btn-secondary">Cancel</a>
+        <button type="submit" class="btn-primary">Save Changes</button>
+    </div>
+</form>

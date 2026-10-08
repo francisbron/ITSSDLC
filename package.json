@@ -1,0 +1,29 @@
+{
+  "name": "ccapdev-mco-database",
+  "version": "1.0.0",
+  "description": "",
+  "homepage": "https://github.com/Ethanol811/CCAPDEV-MCO-Database#readme",
+  "bugs": {
+    "url": "https://github.com/Ethanol811/CCAPDEV-MCO-Database/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Ethanol811/CCAPDEV-MCO-Database.git"
+  },
+  "license": "ISC",
+  "author": "",
+  "type": "commonjs",
+  "main": "authentication.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "@handlebars/allow-prototype-access": "^1.0.5",
+    "bcrypt": "^6.0.0",
+    "express": "^5.2.1",
+    "express-handlebars": "^8.0.6",
+    "express-session": "^1.19.0",
+    "mongoose": "^9.2.4"
+  }
+}

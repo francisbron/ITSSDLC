@@ -1,0 +1,82 @@
+[
+    {
+        "email": "JohnLenon@dlsu.edu.ph",
+        "reservationID": "1",
+        "date": "2026-04-01",
+        "room": "G204",
+        "timeStart": "9:15",
+        "timeEnd": "10:45",
+        "seats": ["A2"],
+        "timeSlots":["9:15"],
+        "isAnonymous": false,
+        "status": "active",
+        "createdAt" : "2026-03-10"
+    }, 
+    {
+        "email": "JohnLenon@dlsu.edu.ph",
+        "reservationID": "2",
+        "date": "2026-03-25",
+        "room": "G204",
+        "timeStart": "2:15",
+        "timeEnd": "4:00",
+        "seats": ["B3"],
+        "timeSlots":["2:15"],
+        "isAnonymous": false,
+        "status": "completed",
+        "createdAt" : "2026-03-10"
+    }, 
+    {
+        "email": "KenDLSU@dlsu.edu.ph",
+        "reservationID": "3",
+        "date": "2026-03-24",
+        "room": "G204",
+        "timeStart": "9:15",
+        "timeEnd": "10:45",
+        "seats": ["B4"],
+        "timeSlots":["9:15"],
+        "isAnonymous": false,
+        "status": "cancelled",
+        "createdAt" : "2026-03-10"
+    },
+    {
+        "email": "AlvinKelly@dlsu.edu.ph",
+        "reservationID": "4",
+        "date": "2026-03-24",
+        "room": "A1904",
+        "timeStart": "10:45",
+        "timeEnd": "12:30",
+        "seats": ["C4"],
+        "timeSlots":["10:45"],
+        "isAnonymous": false,
+        "status": "active",
+        "createdAt" : "2026-03-11"
+    },
+
+    {
+        "email": "Nelson@dlsu.edu.ph",
+        "reservationID": "5",
+        "date": "2026-03-20",
+        "room": "G204",
+        "timeStart": "7:30",
+        "timeEnd": "9:00",
+        "seats": ["D2"],
+        "timeSlots":["7:30"],
+        "isAnonymous": false,
+        "status": "active",
+        "createdAt" : "2026-03-10"
+    },
+
+    {
+        "email": "Taylor@dlsu.edu.ph",
+        "reservationID": "6",
+        "date": "2026-03-18",
+        "room": "V203",
+        "timeStart": "9:15",
+        "timeEnd": "10:45",
+        "seats": ["9:15"],
+        "timeSlots":["9:15"],
+        "isAnonymous": false,
+        "status": "active",
+        "createdAt" : "2026-03-10"
+    }
+]
