@@ -21,6 +21,7 @@
 </section>
 
 <form action="/editReservation/{{reservation._id}}" method="POST" class="edit-form">
+    <input type="hidden" name="_csrf" value="{{csrfToken}}">
 
     <section class="form-section">
         <h3>Change Date</h3>
@@ -73,7 +74,7 @@
                 <span class="row-label">{{this.label}}</span>
                 {{#each this.seats}}
                     {{#if this.taken}}
-                        <label class="seat taken" title="{{#if this.anonymous}}Reserved (Anonymous){{else}}Reserved by {{this.reservedBy}}{{/if}}">
+                        <label class="seat taken" title="Reserved">
                             <input type="radio" name="seat" value="{{this.id}}" disabled>
                             <span class="seat-number">{{this.num}}</span>
                         </label>

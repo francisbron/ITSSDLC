@@ -1,0 +1,7 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Lab Reservation - Login</title><link rel="stylesheet" href="/index.css"></head><body>
+<div class="form-container"><h2>Account Information</h2><form method="POST" action="/login">
+<input type="hidden" name="_csrf" value="{{csrfToken}}">
+<label for="email">DLSU Email</label><input type="email" id="email" name="email" required autocomplete="username" placeholder="student@dlsu.edu.ph">
+<label for="password">Password</label><input type="password" id="password" name="password" required autocomplete="current-password">
+<button type="submit">Login</button><a href="/register">Register</a></form></div>
+</body></html>

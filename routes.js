@@ -3,16 +3,35 @@ const router = express.Router();
 const path = require("path");
 const bcrypt = require("bcrypt");
 const mongoose = require("mongoose");
+const crypto = require("node:crypto");
+const { rateLimit, ipKeyGenerator } = require("express-rate-limit");
 
 const userModel = require("./model/userModel");
 const reservationModel = require("./model/reservationModel");
 const userInfoModel = require("./model/userInfoModel");
+const profileAuditModel = require("./model/profileAuditModel");
 const {
     ReservationLimitError,
     createReservation,
     updateReservation,
     changeReservationStatus
 } = require("./services/reservationService");
+
+const LOGIN_LIMIT = rateLimit({
+    windowMs: 15 * 60 * 1000, limit: 10,
+    standardHeaders: "draft-7", legacyHeaders: false,
+    skipSuccessfulRequests: true,
+    keyGenerator: req => typeof req.body?.email === "string"
+        ? `email:${crypto.createHash("sha256").update(req.body.email.trim().toLowerCase()).digest("hex")}`
+        : ipKeyGenerator(req.ip, 56),
+    message: "Too many login attempts. Try again later."
+});
+const BOOKING_LIMIT = rateLimit({
+    windowMs: 60 * 1000, limit: 20,
+    standardHeaders: "draft-7", legacyHeaders: false,
+    keyGenerator: req => req.session?.user?.id || ipKeyGenerator(req.ip, 56),
+    message: "Reservation request limit reached. Try again later."
+});
 
 const VALID_LABS = new Set(["LAB1", "LAB2", "LAB3"]);
 const VALID_SEATS = new Set(
@@ -30,7 +49,8 @@ const VALID_TIME_SLOTS = new Set(
 
 function hasOnlyFields(body, allowedFields) {
     const allowed = new Set(allowedFields);
-    return Object.keys(body).every(field => allowed.has(field));
+    return body && typeof body === "object" &&
+        Object.keys(body).every(field => field === "_csrf" || allowed.has(field));
 }
 
 function readArray(body, primaryKey, alternateKey) {
@@ -58,7 +78,7 @@ function respondWithReservationError(res, err, message) {
         return res.status(409).send(err.message);
     }
     if (err.name === "ValidationError" || err.name === "StrictModeError") {
-        return res.status(400).send(err.message);
+        return res.status(400).send("Invalid request data");
     }
     console.error(err);
     return res.status(500).send(message);
@@ -107,7 +127,7 @@ async function buildSeatRows(lab, date, currentSeats = [], excludeReservationId 
                 taken: !!takenInfo && !isCurrent,
                 current: isCurrent,
                 anonymous: takenInfo ? takenInfo.isAnonymous : false,
-                reservedBy: takenInfo ? takenInfo.email : null
+                reservedBy: null
             };
         })
     }));
@@ -120,7 +140,7 @@ router.get("/", (req, res) => {
     if (req.session.user) {
         return res.redirect("/dashboard");
     }
-    res.sendFile(path.join(__dirname, "index.html")); 
+    res.render("login", { layout: false }); 
 });
 
 /**
@@ -176,14 +196,32 @@ router.put("/users/:userId/profile", requireLogin, async (req, res) => {
     }
 
     try {
-        await userInfoModel.findOneAndUpdate(
-            { userId: req.session.user.id },
-            {
-                $set: { course, yearLevel, bio },
-                $setOnInsert: { email: req.session.user.email }
-            },
-            { new: true, upsert: true, runValidators: true, setDefaultsOnInsert: true }
-        );
+        await mongoose.connection.transaction(async (mongoSession) => {
+            const before = await userInfoModel.findOne({ userId: req.session.user.id })
+                .session(mongoSession).lean();
+            await userInfoModel.findOneAndUpdate(
+                { userId: req.session.user.id },
+                {
+                    $set: { course, yearLevel, bio },
+                    $setOnInsert: { email: req.session.user.email, userId: req.session.user.id }
+                },
+                {
+                    new: true, upsert: true, runValidators: true, setDefaultsOnInsert: true,
+                    session: mongoSession
+                }
+            );
+            const changedFields = ["course", "yearLevel", "bio"].filter(
+                name => !before || before[name] !== ({ course, yearLevel, bio })[name]
+            );
+            if (changedFields.length) {
+                await new profileAuditModel({
+                    actorId: req.session.user.id,
+                    studentId: req.session.user.id,
+                    changedFields,
+                    action: "profile_updated"
+                }).save({ session: mongoSession });
+            }
+        });
         res.json({ success: true });
     } catch (err) {
         console.error(err);
@@ -191,9 +229,10 @@ router.put("/users/:userId/profile", requireLogin, async (req, res) => {
     }
 });
 
-router.get("/logout", (req, res) => {
+router.post("/logout", (req, res) => {
     req.session.destroy((err) => {
-        if (err) console.error(err);
+        if (err) return res.status(500).send("Failed to log out");
+        res.clearCookie("lab.sid", { path: "/" });
         res.redirect("/");
     })
 });
@@ -203,8 +242,8 @@ router.get("/logout", (req, res) => {
  */
 
 // REGISTER - /register
-router.get("/register", async (req, res) => {
-    res.render("register");
+router.get("/register", (req, res) => {
+    res.render("register", { layout: false });
 });
 
 router.post("/register", async (req, res) => {
@@ -213,15 +252,20 @@ router.post("/register", async (req, res) => {
     }
     const { email, password } = req.body;
     if (typeof email !== "string" || typeof password !== "string" ||
-        !email.trim() || password.length < 8) {
-        return res.status(400).send("Enter a valid email and a password of at least 8 characters");
+        !/^[A-Z0-9._%+-]+@dlsu\.edu\.ph$/i.test(email.trim()) ||
+        password.length < 10 || Buffer.byteLength(password, "utf8") > 72 ||
+        !/[A-Z]/.test(password) || !/[0-9]/.test(password) ||
+        !/[!@#$%^&*]/.test(password)) {
+        return res.status(400).send(
+            "Use a DLSU email and a password of 10+ characters with an uppercase letter, number and symbol"
+        );
     }
 
     try {
-        const hashedPassword = await bcrypt.hash(password, 10);
+        const hashedPassword = await bcrypt.hash(password, 12);
 
         const newUser = new userModel({
-            email: email.trim(),
+            email: email.trim().toLowerCase(),
             password: hashedPassword,
             role: "student",
             activeReservationCount: 0
@@ -237,11 +281,11 @@ router.post("/register", async (req, res) => {
 });
 
 router.get("/api/me", requireLogin, (req, res) => {
-    res.json({ id: req.session.user.id, email: req.session.user.email });
+    res.json({ id: req.session.user.id, email: req.session.user.email, csrfToken: req.session.csrfToken });
 });
 
 // LOGIN - /index
-router.post("/login", async(req, res) => {
+router.post("/login", LOGIN_LIMIT, async(req, res) => {
     try {
         if (!hasOnlyFields(req.body, ["email", "password"])) {
             return res.status(400).send("Unexpected login field");
@@ -250,23 +294,35 @@ router.post("/login", async(req, res) => {
         if (typeof email !== "string" || typeof password !== "string") {
             return res.status(400).send("Invalid login details");
         }
-        const user = await userModel.findOne({ email });
+        const user = await userModel.findOne({ email: email.trim().toLowerCase() });
 
         if (!user) {
-            return res.send("Invalid email or password");
+            return res.status(401).send("Invalid email or password");
         }
 
         const isMatch = await bcrypt.compare(password, user.password);
 
         if (!isMatch) {
-            return res.send("Invalid email or password");
+            return res.status(401).send("Invalid email or password");
         }
 
+        // Upgrade existing bcrypt cost-10 hashes when their owner successfully logs in.
+        if (bcrypt.getRounds(user.password) < 12) {
+            await userModel.updateOne(
+                { _id: user._id },
+                { $set: { password: await bcrypt.hash(password, 12) } }
+            );
+        }
+
+        // Rotate the session ID after successful authentication (session fixation defense).
+        await new Promise((resolve, reject) => req.session.regenerate(err => err ? reject(err) : resolve()));
         req.session.user = {
-            id: user._id.toString(),
-            email: user.email,
-            role: user.role
+            id: user._id.toString(), email: user.email, role: user.role
         };
+        req.session.loggedInAt = Date.now();
+        req.session.lastUserActionAt = Date.now();
+        req.session.csrfToken = crypto.randomBytes(32).toString("hex");
+        await new Promise((resolve, reject) => req.session.save(err => err ? reject(err) : resolve()));
         return res.redirect("/dashboard");
 
     } catch (err) {
@@ -278,6 +334,7 @@ router.post("/login", async(req, res) => {
 // Middleware - checks if logged in
 function requireLogin(req, res, next) {
     if (!req.session.user || !isValidObjectId(req.session.user.id)) {
+        if (req.path.startsWith("/api/")) return res.status(401).json({ success: false, message: "Not logged in" });
         return res.redirect('/');
     }
     next();
@@ -286,10 +343,29 @@ function requireLogin(req, res, next) {
 // Middleware - checks if technician
 function requireTechnician(req, res, next) {
     if (!req.session.user || req.session.user.role !== 'technician' && req.session.user.role !== 'admin') {
-        return res.redirect('/userReservations');
+        return res.status(403).send("Technician authorization required");
     }
     next();
 }
+
+// Only disclose seat occupancy; never student emails or names in this API.
+router.get("/api/availability", requireLogin, async (req, res) => {
+    const { lab, date, time } = req.query;
+    if (!VALID_LABS.has(lab) || !isValidDate(date) || !VALID_TIME_SLOTS.has(time)) {
+        return res.status(400).json({ error: "Invalid availability query" });
+    }
+    try {
+        const reservations = await reservationModel.find({
+            room: lab, date, status: "active", timeSlots: time
+        }).select("seats -_id").lean();
+        const totalSeats = { LAB1: 40, LAB2: 35, LAB3: 30 }[lab];
+        res.set("Cache-Control", "no-store");
+        return res.json({ reservedSeats: [...new Set(reservations.flatMap(r => r.seats))], totalSeats });
+    } catch (err) {
+        console.error(err);
+        return res.status(500).json({ error: "Availability lookup failed" });
+    }
+});
 
 router.get("/dashboard", requireLogin, (req, res) => {
 
@@ -334,7 +410,7 @@ router.get("/makeReservation", requireLogin, async (req, res) => {
     }
 });
 
-router.post("/makeReservation", requireLogin, async (req, res) => {
+router.post("/makeReservation", requireLogin, BOOKING_LIMIT, async (req, res) => {
     if (req.session.user.role !== "student") {
         return res.status(403).send("Only students can make reservations");
     }
@@ -350,11 +426,12 @@ router.post("/makeReservation", requireLogin, async (req, res) => {
 
     if (!VALID_LABS.has(lab) ||
         !isValidDate(date) ||
-        timeSlots.length === 0 ||
+        timeSlots.length === 0 || timeSlots.length > 24 || seats.length > 40 ||
         !timeSlots.every(slot => typeof slot === "string" && VALID_TIME_SLOTS.has(slot)) ||
         seats.length === 0 ||
         !seats.every(seat => typeof seat === "string" && VALID_SEATS.has(seat)) ||
         new Set(seats).size !== seats.length ||
+        new Set(timeSlots).size !== timeSlots.length ||
         (isAnonymous !== undefined && isAnonymous !== "true")) {
         return res.status(400).send("Invalid reservation details");
     }
@@ -428,7 +505,7 @@ router.get("/editReservation/:id", requireLogin, async (req, res) => {
             user: req.session.user,
             isTechnician: req.session.user.role === 'technician' || req.session.user.role === 'admin',
             userReservationsActive: true,
-            reservation,
+            reservation: reservation.toObject(),
             seatRows
         });
     } catch (err) {
@@ -437,7 +514,7 @@ router.get("/editReservation/:id", requireLogin, async (req, res) => {
     }
 });
 
-router.post("/editReservation/:id", requireLogin, async (req, res) => {
+router.post("/editReservation/:id", requireLogin, BOOKING_LIMIT, async (req, res) => {
     if (!isValidObjectId(req.params.id)) return res.status(404).send("Reservation not found");
     if (!hasOnlyFields(req.body, ["date", "timeSlots[]", "timeSlots", "seat", "isAnonymous"])) {
         return res.status(400).send("Unexpected reservation field");
@@ -482,7 +559,7 @@ router.post("/editReservation/:id", requireLogin, async (req, res) => {
  *  Cancel Reservation
  */
 
-router.post("/cancelReservation/:id", requireLogin, async (req, res) => {
+router.post("/cancelReservation/:id", requireLogin, BOOKING_LIMIT, async (req, res) => {
     try {
         if (!isValidObjectId(req.params.id)) return res.status(404).send("Reservation not found");
         const reservation = await reservationModel.findById(req.params.id);
@@ -515,12 +592,15 @@ router.get("/techView", requireTechnician, async (req, res) => {
         const today = new Date().toISOString().split('T')[0];
         const reservations = await reservationModel.find({
             date: today,
-            status: { $in: ['active', 'no-show'] }
+            status: 'active'
         }).lean();
 
         const reservationsWithFlag = reservations.map(r => ({
             ...r,
-            isNoShow: r.status === 'no-show'
+            isNoShow: r.status === 'active' && (() => {
+                const first = r.timeSlots.find(t => VALID_TIME_SLOTS.has(t));
+                return first && Date.now() - new Date(`${r.date}T${first}:00+08:00`).getTime() >= 10 * 60 * 1000;
+            })()
         }));
 
         res.render("techView", {
@@ -539,10 +619,16 @@ router.get("/techView", requireTechnician, async (req, res) => {
 router.post("/removeReservation/:id", requireTechnician, async (req, res) => {
     try {
         if (!isValidObjectId(req.params.id)) return res.status(404).send("Reservation not found");
+        const candidate = await reservationModel.findOne({ _id: req.params.id, status: "active" }).lean();
+        if (!candidate) return res.status(404).send("Active reservation not found");
+        const first = candidate.timeSlots.find(t => VALID_TIME_SLOTS.has(t));
+        if (!first) return res.status(403).send("This booking has no scheduled check-in time");
+        const start = new Date(`${candidate.date}T${first}:00+08:00`).getTime();
+        if (!Number.isFinite(start) || Date.now() - start < 10 * 60 * 1000) {
+            return res.status(403).send("Not yet eligible for no-show removal");
+        }
         const reservation = await changeReservationStatus(
-            req.params.id,
-            "no-show",
-            req.session.user.id
+            req.params.id, "no-show", req.session.user.id
         );
         if (!reservation) return res.status(404).send("Active reservation not found");
         res.redirect("/techView");
@@ -551,7 +637,7 @@ router.post("/removeReservation/:id", requireTechnician, async (req, res) => {
     }
 });
 
-router.post("/walkIn", requireTechnician, async (req, res) => {
+router.post("/walkIn", requireTechnician, BOOKING_LIMIT, async (req, res) => {
     if (!hasOnlyFields(req.body, ["studentEmail", "lab", "seat"])) {
         return res.status(400).send("Unexpected walk-in field");
     }

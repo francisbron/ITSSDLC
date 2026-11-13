@@ -43,6 +43,7 @@
             <div class="card-actions">
                 {{#if this.isNoShow}}
                     <form action="/removeReservation/{{this._id}}" method="POST" style="display:inline;">
+    <input type="hidden" name="_csrf" value="{{csrfToken}}">
                         <button type="submit" class="btn-danger" onclick="return confirm('Remove this reservation due to no-show?')">
                             Remove Reservation (No-Show)
                         </button>
@@ -62,6 +63,7 @@
     <h3>Create Walk-in Reservation</h3>
 
     <form class="walk-in-form" action="/walkIn" method="POST">
+    <input type="hidden" name="_csrf" value="{{csrfToken}}">
         <div class="form-row">
             <div class="form-group">
                 <label for="student-email">Student Email:</label>

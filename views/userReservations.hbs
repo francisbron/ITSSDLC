@@ -36,6 +36,7 @@
             <div class="card-actions">
                 <a href="/editReservation/{{this._id}}" class="btn-edit">Edit</a>
                 <form action="/cancelReservation/{{this._id}}" method="POST" style="display:inline;">
+    <input type="hidden" name="_csrf" value="{{csrfToken}}">
                     <button type="submit" class="btn-cancel" onclick="return confirm('Cancel this reservation?')">Cancel</button>
                 </form>
             </div>

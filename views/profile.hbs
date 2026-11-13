@@ -40,9 +40,10 @@
             </div>
 
             <div class="manageinfobutton" style="margin-top: 10px;">
-                <a href="/logout" class="btn-manageinfo" style="background-color: #dc3545; display: inline-block; text-decoration: none;">
-                    Logout
-                </a>
+                <form action="/logout" method="POST">
+                    <input type="hidden" name="_csrf" value="{{csrfToken}}">
+                    <button type="submit" class="btn-manageinfo" style="background-color:#dc3545;">Logout</button>
+                </form>
             </div>
         </div>
     </div>

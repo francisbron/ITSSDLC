@@ -1,5 +1,5 @@
 // Get the authenticated user's immutable database identity from the session.
-const user = { id: null, email: null };
+const user = { id: null, email: null, csrfToken: null };
 
 fetch('/api/me')
     .then(res => {
@@ -9,6 +9,7 @@ fetch('/api/me')
     .then(data => {
         user.id = data.id;
         user.email = data.email;
+        user.csrfToken = data.csrfToken;
     })
     .catch(err => console.error(err));
 
@@ -60,7 +61,7 @@ document.getElementById('savechanges').addEventListener('click', async () => {
     try {
         const res = await fetch(`/users/${encodeURIComponent(user.id)}/profile`, {
             method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': user.csrfToken },
             body: JSON.stringify(profile)
         });
         const data = await res.json();
@@ -120,7 +121,7 @@ document.getElementById('confirmDeleteBtn').addEventListener('click', async () =
 
     try {
         if (!user.id) throw new Error('Could not verify your account. Please reload and try again.');
-        const res = await fetch('/users/' + encodeURIComponent(user.id), { method: 'DELETE' });
+        const res = await fetch('/users/' + encodeURIComponent(user.id), { method: 'DELETE', headers: { 'X-CSRF-Token': user.csrfToken } });
 
         if (res.status === 401) {
             window.location.href = '/';
