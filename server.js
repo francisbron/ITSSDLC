@@ -6,16 +6,17 @@ const session = require("express-session"); // to save session of logged in user
 const exphbs = require("express-handlebars"); // Express Handlebars
 const Handlebars = require("handlebars"); // Handlebars
 const { allowInsecurePrototypeAccess } = require("@handlebars/allow-prototype-access");
+const migrateOwnership = require("./model/migrateOwnership");
 
 
 const app = express();
 
-mongoose.connect("mongodb://localhost:27017/mydatabase")
-    .then(() => console.log("MongoDB Connected"))
-    .catch(err => console.log("Database Error:", err));
-
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json())
+app.use((req, res, next) => {
+    if (!req.body) req.body = {};
+    next();
+});
 
 app.use(session({
     secret: 'no-clue',
@@ -53,9 +54,27 @@ app.engine("hbs", exphbs.engine({
 app.set("view engine", "hbs");
 app.set("views", path.join(__dirname, "views"));
 
-// Routes
-app.use(routes);
+async function startServer() {
+    try {
+        await mongoose.connect(
+            process.env.MONGODB_URI || "mongodb://localhost:27017/mydatabase?replicaSet=rs0",
+            {
+                maxPoolSize: 10,
+                minPoolSize: 1,
+                waitQueueTimeoutMS: 10000
+            }
+        );
+        console.log("MongoDB Connected");
+        await migrateOwnership();
 
-app.listen(3000, () => {
-    console.log("Server Listening...");
-});
+        app.use(routes);
+        app.listen(process.env.PORT || 3000, () => {
+            console.log("Server Listening...");
+        });
+    } catch (err) {
+        console.error("Server startup failed:", err);
+        process.exit(1);
+    }
+}
+
+startServer();

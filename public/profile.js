@@ -1,9 +1,16 @@
-// Get logged-in user email from session
-const user = { email: null };
+// Get the authenticated user's immutable database identity from the session.
+const user = { id: null, email: null };
 
 fetch('/api/me')
-    .then(res => res.json())
-    .then(data => { user.email = data.email; });
+    .then(res => {
+        if (!res.ok) throw new Error('Unable to load account identity');
+        return res.json();
+    })
+    .then(data => {
+        user.id = data.id;
+        user.email = data.email;
+    })
+    .catch(err => console.error(err));
 
 // Profile Pic — main page
 const profileImage = document.getElementById("profilepic");
@@ -37,14 +44,38 @@ manageModal.addEventListener('shown.bs.modal', () => {
     document.getElementById('deleteInputError').style.display = 'none';
 });
 
-// Save Info Changes — updates displayed values on page
-document.getElementById('savechanges').addEventListener('click', () => {
-    document.getElementById('course').textContent = document.getElementById('courseInput').value;
-    document.getElementById('yearlevel').textContent = document.getElementById('yearlevelInput').value;
-    document.getElementById('bio').textContent = document.getElementById('bioInput').value;
+// Save profile fields through the server-side owner-checked route.
+document.getElementById('savechanges').addEventListener('click', async () => {
+    if (!user.id) {
+        alert('Could not verify your account. Please reload and try again.');
+        return;
+    }
 
-    const instance = bootstrap.Modal.getInstance(manageModal);
-    instance.hide();
+    const profile = {
+        course: document.getElementById('courseInput').value,
+        yearLevel: document.getElementById('yearlevelInput').value,
+        bio: document.getElementById('bioInput').value
+    };
+
+    try {
+        const res = await fetch(`/users/${encodeURIComponent(user.id)}/profile`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(profile)
+        });
+        const data = await res.json();
+        if (!res.ok || !data.success) {
+            throw new Error(data.message || 'Failed to save profile');
+        }
+
+        document.getElementById('course').textContent = profile.course;
+        document.getElementById('yearlevel').textContent = profile.yearLevel;
+        document.getElementById('bio').textContent = profile.bio;
+        bootstrap.Modal.getInstance(manageModal).hide();
+    } catch (err) {
+        console.error(err);
+        alert(err.message || 'Failed to save profile. Please try again.');
+    }
 });
 
 // Profile Pic Modal — preview before saving
@@ -88,7 +119,8 @@ document.getElementById('confirmDeleteBtn').addEventListener('click', async () =
     }
 
     try {
-        const res = await fetch('/users/' + user.email, { method: 'DELETE' });
+        if (!user.id) throw new Error('Could not verify your account. Please reload and try again.');
+        const res = await fetch('/users/' + encodeURIComponent(user.id), { method: 'DELETE' });
 
         if (res.status === 401) {
             window.location.href = '/';
